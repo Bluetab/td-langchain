@@ -1086,15 +1086,17 @@ defmodule LangChain.Chains.LLMChain do
       # add the tool result message to the chain
       updated_chain = LLMChain.add_message(chain, result_message)
 
-      # if the tool results had an error, increment the failure counter. If not,
-      # clear it.
+      # if the tool results had an error, increment the failure counter.
+      # Do NOT reset on success: failures from message processors (e.g.
+      # JsonProcessor) may have incremented the counter before this tool call
+      # was made, and resetting here would hide those failures causing an
+      # infinite loop. The counter is reset by process_message/2 when the LLM
+      # finally returns a valid non-tool assistant message.
       updated_chain =
         if Message.tool_had_errors?(result_message) do
-          # something failed, increment our error counter
           LLMChain.increment_current_failure_count(updated_chain)
         else
-          # no errors, clear any errors
-          LLMChain.reset_current_failure_count(updated_chain)
+          updated_chain
         end
 
       # fire the callbacks

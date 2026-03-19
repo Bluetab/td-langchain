@@ -138,25 +138,31 @@ defmodule LangChain.MessageProcessors.JsonProcessor do
   end
 
   def run(%LLMChain{} = chain, %Message{} = message, regex_pattern) do
-    metadata = %{
-      processor: "json_processor",
-      message_role: message.role,
-      with_regex: true
-    }
+    if Message.is_tool_related?(message) do
+      {:cont, message}
+    else
+      metadata = %{
+        processor: "json_processor",
+        message_role: message.role,
+        with_regex: true
+      }
 
-    LangChain.Telemetry.span([:langchain, :message, :process], metadata, fn ->
-      case Regex.run(regex_pattern, content_to_string(message.processed_content),
-             capture: :all_but_first
-           ) do
-        [json] ->
-          if chain.verbose, do: IO.puts("Extracted JSON text from message")
-          # run recursive call on just the extracted JSON
-          run(chain, %Message{message | processed_content: json})
+      LangChain.Telemetry.span([:langchain, :message, :process], metadata, fn ->
+        case Regex.run(regex_pattern, content_to_string(message.processed_content),
+               capture: :all_but_first
+             ) do
+          [json] ->
+            if chain.verbose, do: IO.puts("Extracted JSON text from message")
+            # run recursive call on just the extracted JSON
+            run(chain, %Message{message | processed_content: json})
 
-        _ ->
-          {:halt, Message.new_user!("ERROR: No JSON found")}
-      end
-    end)
+          _ ->
+            # Regex didn't match — fall back to parsing the raw content as JSON
+            run(chain, message)
+            # {:halt, Message.new_user!("ERROR: No JSON found")}
+        end
+      end)
+    end
   end
 
   defp content_to_string([

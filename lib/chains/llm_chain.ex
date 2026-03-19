@@ -764,6 +764,14 @@ defmodule LangChain.Chains.LLMChain do
         Logger.error("Error during chat call. Reason: #{inspect(reason)}")
         {:error, chain, reason}
 
+      # Some providers can return an "ok" tuple containing a keyword list with
+      # error details (e.g. malformed function call). Normalize it to the
+      # standard error tuple so callers can retry/fallback instead of crashing.
+      {:ok, [error: %LangChainError{} = reason]} ->
+        if chain.verbose, do: IO.inspect(reason, label: "ERROR")
+        Logger.error("Error during chat call. Reason: #{inspect(reason)}")
+        {:error, chain, reason}
+
       {:error, string_reason} when is_binary(string_reason) ->
         if chain.verbose, do: IO.inspect(string_reason, label: "ERROR")
         Logger.error("Error during chat call. Reason: #{inspect(string_reason)}")

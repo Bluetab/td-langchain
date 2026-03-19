@@ -28,6 +28,10 @@ defmodule LangChain.Message.ToolCall do
     # when the tool call is incomplete, the index indicates which tool call to
     # update on a ToolCall.
     field :index, :integer
+    # Provider-specific opaque token that must be echoed back in subsequent turns.
+    # Used by Gemini 3 models: the thoughtSignature is mandatory when function
+    # calling is active in a multi-turn conversation.
+    field :thought_signature, :string, virtual: true
   end
 
   # https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
@@ -38,7 +42,7 @@ defmodule LangChain.Message.ToolCall do
 
   @type t :: %ToolCall{}
 
-  @update_fields [:status, :type, :call_id, :name, :arguments, :index]
+  @update_fields [:status, :type, :call_id, :name, :arguments, :index, :thought_signature]
   @create_fields @update_fields
 
   @doc """

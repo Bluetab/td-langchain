@@ -338,12 +338,18 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
   end
 
   def for_api(%ToolCall{} = call) do
-    %{
+    base = %{
       "functionCall" => %{
         "args" => call.arguments,
         "name" => call.name
       }
     }
+
+    if call.thought_signature do
+      Map.put(base, "thoughtSignature", call.thought_signature)
+    else
+      base
+    end
   end
 
   def for_api(%ToolResult{} = result) do
@@ -702,7 +708,8 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
       name: name,
       arguments: raw_args,
       complete: true,
-      index: data["index"]
+      index: data["index"],
+      thought_signature: data["thoughtSignature"]
     }
     |> ToolCall.new()
     |> case do

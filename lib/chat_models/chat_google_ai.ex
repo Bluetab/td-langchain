@@ -118,6 +118,11 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
 
     # A list of maps for callback handlers (treat as private)
     field :callbacks, {:array, :map}, default: []
+
+    # Connect options forwarded to `Req.new/1` (e.g. `[proxy: {:http, host, port, []}]`).
+    # Virtual because it is a runtime HTTP concern and must not be serialized with
+    # `serialize_config/1` — proxies are environment-specific.
+    field :connect_options, :any, virtual: true, default: []
   end
 
   @type t :: %ChatGoogleAI{}
@@ -134,7 +139,8 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
     :json_response,
     :json_schema,
     :stream,
-    :safety_settings
+    :safety_settings,
+    :connect_options
   ]
   @required_fields [
     :endpoint,
@@ -480,6 +486,7 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
         url: build_url(google_ai),
         json: for_api(google_ai, messages, tools),
         receive_timeout: google_ai.receive_timeout,
+        connect_options: google_ai.connect_options || [],
         retry: :transient,
         max_retries: 3,
         retry_delay: fn attempt -> 300 * attempt end
@@ -529,7 +536,8 @@ defmodule LangChain.ChatModels.ChatGoogleAI do
     Req.new(
       url: build_url(google_ai),
       json: for_api(google_ai, messages, tools),
-      receive_timeout: google_ai.receive_timeout
+      receive_timeout: google_ai.receive_timeout,
+      connect_options: google_ai.connect_options || []
     )
     |> Req.Request.put_header("accept-encoding", "utf-8")
     |> Req.post(
